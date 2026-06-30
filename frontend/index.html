@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TaskMind — AI Task Scheduler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --surface: #12141a;
+    --surface2: #1a1d26;
+    --surface3: #22263a;
+    --border: #2a2e3d;
+    --border2: #353a50;
+    --text: #e8eaf0;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3b0;
+    --accent: #6c63ff;
+    --accent-glow: rgba(108,99,255,0.25);
+    --accent2: #00d9a3;
+    --accent3: #ff6b6b;
+    --accent4: #ffd166;
+    --critical: #ff4757;
+    --high: #ff9f43;
+    --medium: #6c63ff;
+    --low: #00d9a3;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Layout ── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px; min-width: 240px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    padding: 0;
+    z-index: 10;
+  }
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .logo-text { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  .logo-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    background: var(--accent-glow);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 1px 5px; border-radius: 4px;
+    margin-left: auto;
+  }
+  .sidebar-nav { padding: 16px 12px; flex: 1; overflow-y: auto; }
+  .nav-section-label {
+    font-size: 10px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    padding: 0 8px; margin: 16px 0 8px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: var(--radius-sm);
+    cursor: pointer; transition: all 0.15s;
+    font-size: 14px; font-weight: 500; color: var(--text-dim);
+    margin-bottom: 2px;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--accent-glow); color: var(--accent); }
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+  .nav-badge {
+    margin-left: auto; background: var(--accent); color: white;
+    font-size: 10px; font-weight: 700; min-width: 18px; height: 18px;
+    border-radius: 9px; display: flex; align-items: center; justify-content: center;
+    padding: 0 5px;
+  }
+  .sidebar-footer {
+    padding: 16px 12px;
+    border-top: 1px solid var(--border);
+  }
+  .user-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    background: var(--surface2); cursor: pointer;
+  }
+  .user-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #6c63ff, #00d9a3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .user-name { font-size: 13px; font-weight: 600; }
+  .user-role { font-size: 11px; color: var(--text-muted); }
+  .user-status {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent2); margin-left: auto;
+    box-shadow: 0 0 8px var(--accent2);
+  }
+
+  /* ── Main ── */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .topbar {
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 28px; gap: 16px;
+    background: var(--surface);
+  }
+  .topbar-title { font-size: 18px; font-weight: 700; }
+  .topbar-sub { font-size: 13px; color: var(--text-muted); margin-left: 4px; }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .search-box {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 7px 12px;
+    font-size: 13px; color: var(--text-dim);
+    cursor: text; min-width: 220px;
+    transition: border-color 0.15s;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box input {
+    background: none; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-family: var(--font);
+    width: 100%;
+  }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    background: var(--surface2); border: 1px solid var(--border);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 16px; transition: all 0.15s; color: var(--text-dim);
+  }
+  .icon-btn:hover { background: var(--surface3); color: var(--text); border-color: var(--border2); }
+  .btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; font-family: var(--font);
+    cursor: pointer; transition: all 0.15s; border: none;
+  }
+  .btn-primary {
+    background: var(--accent); color: white;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+  .btn-primary:hover { background: #7b73ff; transform: translateY(-1px); }
+  .btn-ghost {
+    background: transparent; color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-ai {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: white; border: none;
+    box-shadow: 0 0 25px rgba(108,99,255,0.35);
+  }
+  .btn-ai:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-danger { background: var(--critical); color: white; }
+  .btn-danger:hover { background: #ff6b7a; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ── Content ── */
+  .content { flex: 1; overflow-y: auto; padding: 28px; }
+  .content::-webkit-scrollbar { width: 6px; }
+  .content::-webkit-scrollbar-track { background: transparent; }
+  .content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── Stats Grid ── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0;
+    right: 0; height: 2px;
+  }
+  .stat-card.accent::before { background: var(--accent); }
+  .stat-card.green::before { background: var(--accent2); }
+  .stat-card.orange::before { background: var(--high); }
+  .stat-card.red::before { background: var(--critical); }
+  .stat-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; margin-bottom: 6px; }
+  .stat-meta { font-size: 12px; color: var(--text-muted); }
+  .stat-icon {
+    position: absolute; right: 16px; top: 16px;
+    font-size: 24px; opacity: 0.3;
+  }
+  .stat-trend { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+  .stat-trend.up { color: var(--accent2); }
+  .stat-trend.down { color: var(--critical); }
+
+  /* ── Section ── */
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .section-title { font-size: 16px; font-weight: 700; }
+  .section-count {
+    background: var(--surface3); border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 20px; font-size: 12px; color: var(--text-muted);
+  }
+  .section-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* ── Filters ── */
+  .filter-bar {
+    display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .filter-chip {
+    padding: 6px 14px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--surface);
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; color: var(--text-dim);
+  }
+  .filter-chip:hover { border-color: var(--border2); color: var(--text); }
+  .filter-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+  /* ── Task Card ── */
+  .task-list { display: flex; flex-direction: column; gap: 10px; }
+  .task-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+    display: flex; align-items: flex-start; gap: 14px;
+    transition: all 0.2s; cursor: pointer; position: relative;
+    overflow: hidden;
+  }
+  .task-card:hover {
+    border-color: var(--border2);
+    background: var(--surface2);
+    transform: translateX(3px);
+  }
+  .task-card.completed { opacity: 0.55; }
+  .task-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 3px;
+  }
+  .task-card.priority-critical::before { background: var(--critical); }
+  .task-card.priority-high::before { background: var(--high); }
+  .task-card.priority-medium::before { background: var(--medium); }
+  .task-card.priority-low::before { background: var(--low); }
+  .task-check {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid var(--border2); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s; margin-top: 2px;
+  }
+  .task-check:hover { border-color: var(--accent2); }
+  .task-check.done { background: var(--accent2); border-color: var(--accent2); color: white; font-size: 11px; }
+  .task-body { flex: 1; min-width: 0; }
+  .task-title {
+    font-size: 14px; font-weight: 600; margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .task-card.completed .task-title { text-decoration: line-through; color: var(--text-muted); }
+  .task-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; }
+  .task-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag {
+    padding: 3px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 500;
+    background: var(--surface3); color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .priority-badge {
+    padding: 3px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600;
+  }
+  .priority-badge.critical { background: rgba(255,71,87,0.15); color: var(--critical); }
+  .priority-badge.high { background: rgba(255,159,67,0.15); color: var(--high); }
+  .priority-badge.medium { background: rgba(108,99,255,0.15); color: var(--medium); }
+  .priority-badge.low { background: rgba(0,217,163,0.15); color: var(--low); }
+  .due-badge {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: var(--text-muted); font-family: var(--mono);
+  }
+  .due-badge.overdue { color: var(--critical); }
+  .due-badge.soon { color: var(--high); }
+  .task-actions {
+    display: flex; gap: 6px; opacity: 0;
+    transition: opacity 0.15s; flex-shrink: 0;
+  }
+  .task-card:hover .task-actions { opacity: 1; }
+  .action-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    background: var(--surface3); border: 1px solid var(--border);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: var(--text-muted); transition: all 0.15s;
+  }
+  .action-btn:hover { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+  .action-btn.delete:hover { background: rgba(255,71,87,0.15); color: var(--critical); border-color: var(--critical); }
+  .ai-hint {
+    font-size: 11px; color: var(--accent); display: flex; align-items: center; gap: 4px;
+    margin-top: 6px;
+  }
+
+  /* ── Empty State ── */
+  .empty-state {
+    text-align: center; padding: 60px 20px;
+    color: var(--text-muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+  .empty-title { font-size: 18px; font-weight: 600; color: var(--text-dim); margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; margin-bottom: 24px; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+    z-index: 100; display: flex; align-items: center; justify-content: center;
+    padding: 20px; animation: fadeIn 0.15s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px; width: 100%;
+    max-width: 520px; max-height: 90vh; overflow-y: auto;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+  .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .modal-close {
+    margin-left: auto; width: 30px; height: 30px;
+    border-radius: 8px; background: var(--surface2);
+    border: 1px solid var(--border); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: var(--text-muted);
+  }
+  .modal-close:hover { background: var(--surface3); color: var(--text); }
+
+  /* ── Form ── */
+  .form-group { margin-bottom: 18px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: block; }
+  .form-input, .form-textarea, .form-select {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px 12px;
+    font-size: 14px; color: var(--text); font-family: var(--font);
+    outline: none; transition: border-color 0.15s;
+  }
+  .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+  .form-textarea { resize: vertical; min-height: 80px; }
+  .form-select option { background: var(--surface2); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── AI Panel ── */
+  .ai-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    margin-bottom: 20px; position: relative; overflow: hidden;
+  }
+  .ai-panel::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .ai-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-glow); border: 1px solid var(--accent);
+    color: var(--accent); padding: 4px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .ai-panel-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .ai-panel-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+  .ai-schedule-slots { display: flex; flex-direction: column; gap: 8px; }
+  .schedule-slot {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .slot-time { font-family: var(--mono); font-size: 12px; color: var(--accent); width: 50px; flex-shrink: 0; }
+  .slot-bar { width: 4px; border-radius: 2px; align-self: stretch; background: var(--accent); flex-shrink: 0; }
+  .slot-bar.break-slot { background: var(--border2); }
+  .slot-title { font-size: 13px; font-weight: 500; }
+  .slot-duration { margin-left: auto; font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+
+  /* ── Analytics ── */
+  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+  }
+  .chart-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; }
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; }
+  .bar-label { font-size: 12px; color: var(--text-dim); width: 60px; flex-shrink: 0; text-align: right; }
+  .bar-track { flex: 1; background: var(--surface3); border-radius: 4px; height: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+  .bar-val { font-size: 12px; font-family: var(--mono); color: var(--text-dim); width: 24px; }
+  .donut-wrap { display: flex; align-items: center; gap: 20px; }
+  .donut-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ── Notification Toast ── */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 999;
+  }
+  .toast {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 16px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    animation: slideInRight 0.3s ease; max-width: 320px;
+  }
+  @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+  .toast-icon { font-size: 16px; flex-shrink: 0; }
+  .toast-msg { flex: 1; }
+  .toast-close { cursor: pointer; color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
+  .toast.success { border-left: 3px solid var(--accent2); }
+  .toast.error { border-left: 3px solid var(--critical); }
+  .toast.info { border-left: 3px solid var(--accent); }
+  .toast.ai { border-left: 3px solid #a78bfa; }
+
+  /* ── Loader ── */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ai-thinking {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px; background: var(--surface2); border-radius: var(--radius-sm);
+    border: 1px solid var(--border); color: var(--text-dim); font-size: 13px;
+  }
+
+  /* ── Progress Ring ── */
+  .progress-ring-wrap { position: relative; width: 100px; height: 100px; flex-shrink: 0; }
+  .progress-ring-label {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .progress-val { font-size: 22px; font-weight: 700; }
+  .progress-sub { font-size: 10px; color: var(--text-muted); }
+
+  /* ── Insight card ── */
+  .insight-card {
+    background: linear-gradient(135deg, rgba(108,99,255,0.12), rgba(0,217,163,0.08));
+    border: 1px solid rgba(108,99,255,0.3); border-radius: var(--radius); padding: 20px;
+    margin-bottom: 20px;
+  }
+  .insight-headline { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+  .insight-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .insight-section-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .insight-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; margin-bottom: 6px; color: var(--text-dim); }
+  .insight-bullet { color: var(--accent2); font-size: 10px; margin-top: 3px; }
+  .insight-goal {
+    margin-top: 16px; padding: 12px; background: var(--surface3);
+    border-radius: var(--radius-sm); font-size: 13px;
+    border-left: 3px solid var(--accent4); color: var(--text-dim);
+  }
+
+  /* ── View tabs ── */
+  .view-tabs { display: flex; gap: 4px; }
+  .view-tab {
+    padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+    cursor: pointer; color: var(--text-muted); transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .view-tab:hover { color: var(--text); background: var(--surface2); }
+  .view-tab.active { background: var(--accent-glow); color: var(--accent); border-color: var(--accent); }
+
+  /* ── Misc ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+  .text-accent { color: var(--accent); }
+  .text-green { color: var(--accent2); }
+  .text-red { color: var(--critical); }
+  .font-mono { font-family: var(--mono); }
+  .flex { display: flex; }
+  .items-center { align-items: center; }
+  .gap-8 { gap: 8px; }
+  .ml-auto { margin-left: auto; }
+
+  @media (max-width: 900px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .analytics-grid { grid-template-columns: 1fr; }
+    .sidebar { width: 200px; min-width: 200px; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ── Data ──────────────────────────────────────────────────────────
+const DEMO_TASKS = [
+  { id:'1', title:'Deploy authentication microservice', description:'Implement JWT-based auth with refresh token rotation and Redis session store.', priority:'critical', status:'in_progress', category:'work', due_date: new Date(Date.now()+3600000*2).toISOString(), tags:['backend','security'], estimated_minutes:120, ai_suggestion:'Start with the token refresh logic — it blocks the frontend team.' },
+  { id:'2', title:'Design system component library audit', description:'Review all Figma components against production code. Document discrepancies.', priority:'high', status:'pending', category:'work', due_date: new Date(Date.now()+86400000).toISOString(), tags:['design','frontend'], estimated_minutes:90, ai_suggestion:'Tackle buttons and forms first — highest reuse rate.' },
+  { id:'3', title:'Q3 investor report draft', description:'Compile metrics, write narrative, prepare slides for board presentation.', priority:'high', status:'pending', category:'work', due_date: new Date(Date.now()+86400000*3).toISOString(), tags:['finance','writing'], estimated_minutes:180, ai_suggestion:'Pull the metrics tonight so drafting tomorrow is smooth.' },
+  { id:'4', title:'Morning run — 5k', description:'Maintain weekly cardio schedule. Target pace: 5:30/km.', priority:'medium', status:'pending', category:'health', due_date: new Date(Date.now()+86400000).toISOString(), tags:['fitness'], estimated_minutes:35, ai_suggestion:'Schedule for 7 AM before cognitive load peaks.' },
+  { id:'5', title:'Read "Thinking in Systems" — ch. 4-6', description:'Take notes on feedback loops and system archetypes.', priority:'low', status:'pending', category:'learning', due_date: new Date(Date.now()+86400000*5).toISOString(), tags:['reading','systems'], estimated_minutes:60, ai_suggestion:'Evening reading slot — pairs well with a wind-down routine.' },
+  { id:'6', title:'Fix checkout page API timeout bug', description:'Prod issue: payment API calls timing out after 28s. Investigate retry logic.', priority:'critical', status:'pending', category:'work', due_date: new Date(Date.now()+3600000*4).toISOString(), tags:['backend','bug','prod'], estimated_minutes:45, ai_suggestion:'Check network timeouts first — likely upstream, not your code.' },
+  { id:'7', title:'Monthly budget review', description:'Reconcile accounts, update spreadsheet, review subscriptions to cancel.', priority:'medium', status:'completed', category:'finance', due_date: new Date(Date.now()-86400000).toISOString(), tags:['finance'], estimated_minutes:30, ai_suggestion:null, completed_at: new Date(Date.now()-3600000).toISOString() },
+  { id:'8', title:'Set up development environment for new hire', description:'Prepare onboarding docs, configure access, create starter project scaffold.', priority:'medium', status:'pending', category:'work', due_date: new Date(Date.now()+86400000*2).toISOString(), tags:['devops','team'], estimated_minutes:60, ai_suggestion:'Pair this with your existing docs update — two birds.' },
+];
+
+const DEMO_SCHEDULE = {
+  schedule: [
+    { time:'09:00', task_title:'Fix checkout page API timeout bug', duration_minutes:45, type:'task' },
+    { time:'09:45', task_title:'Break', duration_minutes:10, type:'break' },
+    { time:'09:55', task_title:'Deploy authentication microservice', duration_minutes:120, type:'task' },
+    { time:'11:55', task_title:'Buffer / Review PRs', duration_minutes:25, type:'buffer' },
+    { time:'12:20', task_title:'Q3 investor report draft', duration_minutes:90, type:'task' },
+    { time:'13:50', task_title:'Lunch Break', duration_minutes:60, type:'break' },
+    { time:'14:50', task_title:'Design system audit', duration_minutes:90, type:'task' },
+    { time:'16:20', task_title:'Break', duration_minutes:10, type:'break' },
+    { time:'16:30', task_title:'Set up dev environment for new hire', duration_minutes:60, type:'task' },
+  ],
+  summary: "Front-loaded with two critical blockers, then sustained deep work through the afternoon.",
+  focus_score: 88,
+  tips: ["Silence notifications until 12:00 for maximum focus.", "The API bug needs prod access — confirm permissions before 9 AM."]
+};
+
+const DEMO_INSIGHTS = {
+  headline_insight: "You complete 87% of high-priority tasks on time — but low-priority tasks pile up and create cognitive overhead.",
+  strengths: ["Consistent with critical and high-priority work", "Good estimation accuracy on technical tasks"],
+  improvement_areas: ["Personal tasks scheduled but rarely completed", "Low-priority items need a weekly sweep"],
+  weekly_goal: "Clear all low-priority backlog by Friday — batch them into a single 90-minute slot.",
+  motivation_quote: "The key is not to prioritize what's on your schedule, but to schedule your priorities.",
+};
+
+// ── Utils ─────────────────────────────────────────────────────────
+function formatDue(iso) {
+  if (!iso) return null;
+  const d = new Date(iso), now = new Date();
+  const diff = d - now;
+  if (diff < 0) return { label: `${Math.round(-diff/3600000)}h overdue`, cls: 'overdue' };
+  if (diff < 7200000) return { label: `${Math.round(diff/3600000)}h left`, cls: 'soon' };
+  if (diff < 86400000) return { label: `Today ${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}`, cls: '' };
+  return { label: d.toLocaleDateString([], {month:'short',day:'numeric'}), cls: '' };
+}
+function uid() { return Math.random().toString(36).slice(2); }
+const PRI_ORDER = { critical:0, high:1, medium:2, low:3 };
+
+// ── Toast System ──────────────────────────────────────────────────
+function ToastContainer({ toasts, removeToast }) {
+  return React.createElement('div', { className:'toast-container' },
+    toasts.map(t =>
+      React.createElement('div', { key:t.id, className:`toast ${t.type}` },
+        React.createElement('span', { className:'toast-icon' }, t.icon),
+        React.createElement('span', { className:'toast-msg' }, t.message),
+        React.createElement('span', { className:'toast-close', onClick:()=>removeToast(t.id) }, '✕')
+      )
+    )
+  );
+}
+
+// ── Task Card ─────────────────────────────────────────────────────
+function TaskCard({ task, onToggle, onDelete, onEdit }) {
+  const due = formatDue(task.due_date);
+  const done = task.status === 'completed';
+  return React.createElement('div', {
+    className: `task-card priority-${task.priority} ${done?'completed':''}`,
+    onClick: () => onEdit(task)
+  },
+    React.createElement('div', {
+      className: `task-check ${done?'done':''}`,
+      onClick: e => { e.stopPropagation(); onToggle(task.id); }
+    }, done ? '✓' : ''),
+    React.createElement('div', { className:'task-body' },
+      React.createElement('div', { className:'task-title' }, task.title),
+      task.description && React.createElement('div', { className:'task-desc' }, task.description.slice(0,100) + (task.description.length>100?'…':'')),
+      React.createElement('div', { className:'task-meta' },
+        React.createElement('span', { className:`priority-badge ${task.priority}` }, task.priority),
+        React.createElement('span', { className:'tag' }, task.category),
+        task.estimated_minutes && React.createElement('span', { className:'tag' }, `⏱ ${task.estimated_minutes}m`),
+        due && React.createElement('span', { className:`due-badge ${due.cls}` }, '📅 ', due.label),
+        task.tags && task.tags.slice(0,2).map(tag =>
+          React.createElement('span', { key:tag, className:'tag' }, '#'+tag)
+        )
+      ),
+      task.ai_suggestion && React.createElement('div', { className:'ai-hint' }, '✦ AI: ', task.ai_suggestion)
+    ),
+    React.createElement('div', { className:'task-actions' },
+      React.createElement('div', {
+        className:'action-btn delete',
+        onClick: e => { e.stopPropagation(); onDelete(task.id); },
+        title:'Delete'
+      }, '🗑')
+    )
+  );
+}
+
+// ── Task Form Modal ───────────────────────────────────────────────
+function TaskModal({ task, onSave, onClose }) {
+  const editing = !!task;
+  const [form, setForm] = useState(task || {
+    title:'', description:'', priority:'medium',
+    category:'work', due_date:'', tags:'', estimated_minutes:''
+  });
+  const set = (k,v) => setForm(f => ({...f,[k]:v}));
+
+  const handleSave = () => {
+    if (!form.title.trim()) return;
+    const saved = {
+      ...form,
+      id: form.id || uid(),
+      tags: typeof form.tags === 'string' ? form.tags.split(',').map(t=>t.trim()).filter(Boolean) : form.tags,
+      estimated_minutes: parseInt(form.estimated_minutes)||null,
+      status: form.status || 'pending',
+      created_at: form.created_at || new Date().toISOString(),
+    };
+    onSave(saved);
+  };
+
+  return React.createElement('div', { className:'modal-overlay', onClick:e=>e.target===e.currentTarget&&onClose() },
+    React.createElement('div', { className:'modal' },
+      React.createElement('div', { className:'modal-header' },
+        React.createElement('div', { className:'logo-icon', style:{width:28,height:28,fontSize:13} }, '✦'),
+        React.createElement('div', null,
+          React.createElement('div', { className:'modal-title' }, editing ? 'Edit Task' : 'New Task'),
+          React.createElement('div', { className:'modal-sub' }, editing ? 'Update task details' : 'Add a new task to your board')
+        ),
+        React.createElement('div', { className:'modal-close', onClick:onClose }, '✕')
+      ),
+      React.createElement('div', { className:'form-group' },
+        React.createElement('label', { className:'form-label' }, 'Title *'),
+        React.createElement('input', { className:'form-input', placeholder:'What needs to be done?', value:form.title, onChange:e=>set('title',e.target.value) })
+      ),
+      React.createElement('div', { className:'form-group' },
+        React.createElement('label', { className:'form-label' }, 'Description'),
+        React.createElement('textarea', { className:'form-textarea', placeholder:'Add more context…', value:form.description||'', onChange:e=>set('description',e.target.value) })
+      ),
+      React.createElement('div', { className:'form-row' },
+        React.createElement('div', { className:'form-group', style:{margin:0} },
+          React.createElement('label', { className:'form-label' }, 'Priority'),
+          React.createElement('select', { className:'form-select', value:form.priority, onChange:e=>set('priority',e.target.value) },
+            ['critical','high','medium','low'].map(p => React.createElement('option', {key:p,value:p}, p.charAt(0).toUpperCase()+p.slice(1)))
+          )
+        ),
+        React.createElement('div', { className:'form-group', style:{margin:0} },
+          React.createElement('label', { className:'form-label' }, 'Category'),
+          React.createElement('select', { className:'form-select', value:form.category, onChange:e=>set('category',e.target.value) },
+            ['work','personal','health','finance','learning','other'].map(c => React.createElement('option', {key:c,value:c}, c.charAt(0).toUpperCase()+c.slice(1)))
+          )
+        )
+      ),
+      React.createElement('div', { className:'form-row', style:{marginTop:14} },
+        React.createElement('div', { className:'form-group', style:{margin:0} },
+          React.createElement('label', { className:'form-label' }, 'Due Date'),
+          React.createElement('input', { type:'datetime-local', className:'form-input', value:form.due_date?form.due_date.slice(0,16):'', onChange:e=>set('due_date',e.target.value) })
+        ),
+        React.createElement('div', { className:'form-group', style:{margin:0} },
+          React.createElement('label', { className:'form-label' }, 'Est. Minutes'),
+          React.createElement('input', { type:'number', className:'form-input', placeholder:'e.g. 45', value:form.estimated_minutes||'', onChange:e=>set('estimated_minutes',e.target.value) })
+        )
+      ),
+      React.createElement('div', { className:'form-group', style:{marginTop:14} },
+        React.createElement('label', { className:'form-label' }, 'Tags (comma separated)'),
+        React.createElement('input', { className:'form-input', placeholder:'backend, urgent, …', value:Array.isArray(form.tags)?form.tags.join(', '):form.tags||'', onChange:e=>set('tags',e.target.value) })
+      ),
+      React.createElement('div', { className:'modal-footer' },
+        React.createElement('button', { className:'btn btn-ghost', onClick:onClose }, 'Cancel'),
+        React.createElement('button', { className:'btn btn-primary', onClick:handleSave }, editing ? 'Save Changes' : '+ Add Task')
+      )
+    )
+  );
+}
+
+// ── Progress Ring ─────────────────────────────────────────────────
+function ProgressRing({ pct, color='#6c63ff', size=100 }) {
+  const r = 38, cx = 50, cy = 50;
+  const circ = 2 * Math.PI * r;
+  const dash = circ * (1 - pct/100);
+  return React.createElement('div', { className:'progress-ring-wrap', style:{width:size,height:size} },
+    React.createElement('svg', { viewBox:'0 0 100 100', style:{transform:'rotate(-90deg)',width:'100%',height:'100%'} },
+      React.createElement('circle', { cx, cy, r, fill:'none', stroke:'#22263a', strokeWidth:7 }),
+      React.createElement('circle', { cx, cy, r, fill:'none', stroke:color, strokeWidth:7, strokeDasharray:circ, strokeDashoffset:dash, strokeLinecap:'round', style:{transition:'stroke-dashoffset 1s ease'} })
+    ),
+    React.createElement('div', { className:'progress-ring-label' },
+      React.createElement('span', { className:'progress-val' }, pct+'%'),
+      React.createElement('span', { className:'progress-sub' }, 'done')
+    )
+  );
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────
+function Dashboard({ tasks, onAddTask, onToggle, onDelete, onEdit, toast }) {
+  const [filter, setFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [schedule, setSchedule] = useState(null);
+  const [showSchedule, setShowSchedule] = useState(false);
+
+  const total = tasks.length;
+  const completed = tasks.filter(t=>t.status==='completed').length;
+  const pending = tasks.filter(t=>t.status==='pending'||t.status==='in_progress').length;
+  const overdue = tasks.filter(t=>t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='completed').length;
+  const completionRate = total ? Math.round(completed/total*100) : 0;
+
+  const filtered = tasks
+    .filter(t => {
+      if (filter==='pending') return t.status==='pending'||t.status==='in_progress';
+      if (filter==='completed') return t.status==='completed';
+      if (filter==='critical') return t.priority==='critical';
+      if (filter==='overdue') return t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='completed';
+      return true;
+    })
+    .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => PRI_ORDER[a.priority]-PRI_ORDER[b.priority]);
+
+  const generateSchedule = async () => {
+    setAiLoading(true);
+    await new Promise(r=>setTimeout(r,1800));
+    setSchedule(DEMO_SCHEDULE);
+    setShowSchedule(true);
+    setAiLoading(false);
+    toast('AI schedule generated — 88 focus score!', 'ai', '✦');
+  };
+
+  return React.createElement('div', null,
+    // Stats
+    React.createElement('div', { className:'stats-grid' },
+      React.createElement('div', { className:'stat-card accent' },
+        React.createElement('div', { className:'stat-icon' }, '📋'),
+        React.createElement('div', { className:'stat-label' }, 'Total Tasks'),
+        React.createElement('div', { className:'stat-value' }, total),
+        React.createElement('div', { className:'stat-meta' }, React.createElement('span', { className:'stat-trend up' }, '↑ 3 this week'))
+      ),
+      React.createElement('div', { className:'stat-card green' },
+        React.createElement('div', { className:'stat-icon' }, '✅'),
+        React.createElement('div', { className:'stat-label' }, 'Completed'),
+        React.createElement('div', { className:'stat-value', style:{color:'var(--accent2)'} }, completed),
+        React.createElement('div', { className:'stat-meta' }, completionRate+'% completion rate')
+      ),
+      React.createElement('div', { className:'stat-card orange' },
+        React.createElement('div', { className:'stat-icon' }, '⏳'),
+        React.createElement('div', { className:'stat-label' }, 'In Progress'),
+        React.createElement('div', { className:'stat-value', style:{color:'var(--high)'} }, pending),
+        React.createElement('div', { className:'stat-meta' }, tasks.filter(t=>t.priority==='critical').length+' critical')
+      ),
+      React.createElement('div', { className:'stat-card red' },
+        React.createElement('div', { className:'stat-icon' }, '🔥'),
+        React.createElement('div', { className:'stat-label' }, 'Overdue'),
+        React.createElement('div', { className:'stat-value', style:{color:overdue?'var(--critical)':'var(--text)'} }, overdue),
+        React.createElement('div', { className:'stat-meta' }, overdue ? 'Needs immediate attention' : 'All on track 🎉')
+      )
+    ),
+
+    // AI Schedule Panel
+    React.createElement('div', { className:'ai-panel' },
+      React.createElement('div', { className:'ai-badge' }, '✦ AI Powered'),
+      React.createElement('div', { style:{display:'flex',alignItems:'flex-start',gap:16} },
+        React.createElement('div', { style:{flex:1} },
+          React.createElement('div', { className:'ai-panel-title' }, 'Smart Daily Planner'),
+          React.createElement('div', { className:'ai-panel-sub' }, 'Let AI analyze your tasks and generate an optimized schedule based on priority, deadlines, and cognitive load patterns.'),
+          React.createElement('div', { style:{display:'flex',gap:10} },
+            React.createElement('button', { className:'btn btn-ai', onClick:generateSchedule, disabled:aiLoading },
+              aiLoading ? React.createElement('div', {className:'spinner'}) : '✦',
+              aiLoading ? ' Analyzing tasks…' : ' Generate Today\'s Schedule'
+            ),
+            showSchedule && React.createElement('button', { className:'btn btn-ghost', onClick:()=>setShowSchedule(!showSchedule) }, showSchedule?'Hide':'Show')
+          )
+        )
+      ),
+      showSchedule && schedule && React.createElement('div', { style:{marginTop:20} },
+        React.createElement('div', { style:{display:'flex',alignItems:'center',gap:12,marginBottom:12} },
+          React.createElement('div', { style:{fontSize:13,color:'var(--text-dim)'} }, schedule.summary),
+          React.createElement('div', { style:{marginLeft:'auto',background:'var(--accent-glow)',border:'1px solid var(--accent)',padding:'4px 10px',borderRadius:6,fontSize:12,color:'var(--accent)',fontFamily:'var(--mono)'} }, '⚡ Focus: '+schedule.focus_score+'/100')
+        ),
+        React.createElement('div', { className:'ai-schedule-slots' },
+          schedule.schedule.map((slot,i) =>
+            React.createElement('div', { key:i, className:'schedule-slot' },
+              React.createElement('span', { className:'slot-time' }, slot.time),
+              React.createElement('div', { className:`slot-bar ${slot.type==='break'?'break-slot':''}` }),
+              React.createElement('span', { className:'slot-title' }, slot.task_title),
+              React.createElement('span', { className:'slot-duration' }, slot.duration_minutes+'m')
+            )
+          )
+        ),
+        schedule.tips && React.createElement('div', { style:{marginTop:12,display:'flex',flexDirection:'column',gap:6} },
+          schedule.tips.map((tip,i) =>
+            React.createElement('div', { key:i, className:'ai-hint' }, '→ '+tip)
+          )
+        )
+      )
+    ),
+
+    // Task List
+    React.createElement('div', null,
+      React.createElement('div', { className:'section-header' },
+        React.createElement('span', { className:'section-title' }, 'Tasks'),
+        React.createElement('span', { className:'section-count' }, filtered.length+' tasks'),
+        React.createElement('div', { className:'section-actions' },
+          React.createElement('div', { className:'search-box' },
+            React.createElement('span', null, '🔍'),
+            React.createElement('input', { placeholder:'Search tasks…', value:search, onChange:e=>setSearch(e.target.value) })
+          ),
+          React.createElement('button', { className:'btn btn-primary', onClick:onAddTask }, '+ New Task')
+        )
+      ),
+      React.createElement('div', { className:'filter-bar' },
+        ['all','pending','completed','critical','overdue'].map(f =>
+          React.createElement('div', { key:f, className:`filter-chip ${filter===f?'active':''}`, onClick:()=>setFilter(f) },
+            {all:'All',pending:'In Progress',completed:'Completed',critical:'🔥 Critical',overdue:'⚠ Overdue'}[f]
+          )
+        )
+      ),
+      filtered.length === 0
+        ? React.createElement('div', { className:'empty-state' },
+            React.createElement('div', { className:'empty-icon' }, filter==='overdue'?'✅':'📝'),
+            React.createElement('div', { className:'empty-title' }, filter==='overdue'?'No overdue tasks!':'No tasks found'),
+            React.createElement('div', { className:'empty-sub' }, filter==='overdue'?'Everything is on track.':'Try a different filter or add a new task.'),
+            React.createElement('button', { className:'btn btn-primary', onClick:onAddTask }, '+ Add Task')
+          )
+        : React.createElement('div', { className:'task-list' },
+            filtered.map(t =>
+              React.createElement(TaskCard, { key:t.id, task:t, onToggle, onDelete, onEdit })
+            )
+          )
+    )
+  );
+}
+
+// ── Analytics View ────────────────────────────────────────────────
+function Analytics({ tasks, toast }) {
+  const [insights, setInsights] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const total = tasks.length || 1;
+  const byPri = { critical:0, high:0, medium:0, low:0 };
+  const byCat = {};
+  let completed = 0;
+  tasks.forEach(t => {
+    byPri[t.priority] = (byPri[t.priority]||0)+1;
+    byCat[t.category] = (byCat[t.category]||0)+1;
+    if (t.status==='completed') completed++;
+  });
+
+  const catColors = { work:'#6c63ff', personal:'#00d9a3', health:'#ff6b6b', finance:'#ffd166', learning:'#a78bfa', other:'#94a3b8' };
+
+  const loadInsights = async () => {
+    setLoading(true);
+    await new Promise(r=>setTimeout(r,1600));
+    setInsights(DEMO_INSIGHTS);
+    setLoading(false);
+    toast('Insights generated!', 'ai', '✦');
+  };
+
+  return React.createElement('div', null,
+    React.createElement('div', { className:'section-header', style:{marginBottom:24} },
+      React.createElement('span', { className:'section-title' }, 'Analytics & Insights'),
+      React.createElement('div', { className:'section-actions' },
+        React.createElement('button', { className:'btn btn-ai', onClick:loadInsights, disabled:loading },
+          loading ? React.createElement('div',{className:'spinner'}) : '✦',
+          loading ? ' Analyzing…' : ' Get AI Insights'
+        )
+      )
+    ),
+
+    insights && React.createElement('div', { className:'insight-card' },
+      React.createElement('div', { className:'ai-badge' }, '✦ AI Analysis'),
+      React.createElement('div', { className:'insight-headline' }, insights.headline_insight),
+      React.createElement('div', { className:'insight-cols' },
+        React.createElement('div', null,
+          React.createElement('div', { className:'insight-section-title' }, '💪 Strengths'),
+          insights.strengths.map((s,i) => React.createElement('div', { key:i, className:'insight-item' },
+            React.createElement('span', { className:'insight-bullet' }, '●'),
+            s
+          ))
+        ),
+        React.createElement('div', null,
+          React.createElement('div', { className:'insight-section-title' }, '📈 Improve'),
+          insights.improvement_areas.map((s,i) => React.createElement('div', { key:i, className:'insight-item' },
+            React.createElement('span', { className:'insight-bullet', style:{color:'var(--high)'} }, '●'),
+            s
+          ))
+        )
+      ),
+      React.createElement('div', { className:'insight-goal' }, '🎯 Weekly goal: ', insights.weekly_goal)
+    ),
+
+    React.createElement('div', { className:'analytics-grid' },
+      // Completion
+      React.createElement('div', { className:'chart-card' },
+        React.createElement('div', { className:'chart-title' }, 'Completion Overview'),
+        React.createElement('div', { className:'donut-wrap' },
+          React.createElement(ProgressRing, { pct: total>1?Math.round(completed/total*100):0 }),
+          React.createElement('div', { className:'donut-legend' },
+            [['Completed', completed, 'var(--accent2)'], ['Pending', tasks.filter(t=>t.status==='pending').length, 'var(--accent)'], ['In Progress', tasks.filter(t=>t.status==='in_progress').length, 'var(--high)']].map(([l,v,c])=>
+              React.createElement('div', { key:l, className:'legend-item' },
+                React.createElement('div', { className:'legend-dot', style:{background:c} }),
+                React.createElement('span', { style:{color:'var(--text-dim)'} }, l),
+                React.createElement('span', { style:{marginLeft:'auto',fontFamily:'var(--mono)',fontWeight:700} }, v)
+              )
+            )
+          )
+        )
+      ),
+
+      // By Priority
+      React.createElement('div', { className:'chart-card' },
+        React.createElement('div', { className:'chart-title' }, 'Priority Distribution'),
+        React.createElement('div', { className:'bar-chart' },
+          [['critical','var(--critical)'],['high','var(--high)'],['medium','var(--medium)'],['low','var(--low)']].map(([p,c]) =>
+            React.createElement('div', { key:p, className:'bar-row' },
+              React.createElement('span', { className:'bar-label' }, p),
+              React.createElement('div', { className:'bar-track' },
+                React.createElement('div', { className:'bar-fill', style:{width:(byPri[p]/total*100)+'%', background:c} })
+              ),
+              React.createElement('span', { className:'bar-val' }, byPri[p])
+            )
+          )
+        )
+      ),
+
+      // By Category
+      React.createElement('div', { className:'chart-card' },
+        React.createElement('div', { className:'chart-title' }, 'Tasks by Category'),
+        React.createElement('div', { className:'bar-chart' },
+          Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([cat,cnt]) =>
+            React.createElement('div', { key:cat, className:'bar-row' },
+              React.createElement('span', { className:'bar-label' }, cat),
+              React.createElement('div', { className:'bar-track' },
+                React.createElement('div', { className:'bar-fill', style:{width:(cnt/total*100)+'%', background:catColors[cat]||'#6c63ff'} })
+              ),
+              React.createElement('span', { className:'bar-val' }, cnt)
+            )
+          )
+        )
+      ),
+
+      // Quick stats
+      React.createElement('div', { className:'chart-card' },
+        React.createElement('div', { className:'chart-title' }, 'Quick Stats'),
+        [
+          ['Total Tasks', tasks.length, '📋'],
+          ['Completed', tasks.filter(t=>t.status==='completed').length, '✅'],
+          ['Overdue', tasks.filter(t=>t.due_date&&new Date(t.due_date)<new Date()&&t.status!=='completed').length, '⚠'],
+          ['Critical', tasks.filter(t=>t.priority==='critical').length, '🔥'],
+          ['Avg Est.', tasks.filter(t=>t.estimated_minutes).length ? Math.round(tasks.filter(t=>t.estimated_minutes).reduce((s,t)=>s+t.estimated_minutes,0)/tasks.filter(t=>t.estimated_minutes).length)+'m' : '—', '⏱'],
+        ].map(([label, val, icon]) =>
+          React.createElement('div', { key:label, style:{display:'flex',alignItems:'center',gap:10,padding:'10px 0',borderBottom:'1px solid var(--border)',fontSize:14} },
+            React.createElement('span', null, icon),
+            React.createElement('span', { style:{color:'var(--text-dim)'} }, label),
+            React.createElement('span', { style:{marginLeft:'auto',fontFamily:'var(--mono)',fontWeight:700} }, val)
+          )
+        )
+      )
+    )
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────────
+function App() {
+  const [tasks, setTasks] = useState(DEMO_TASKS);
+  const [view, setView] = useState('dashboard');
+  const [modal, setModal] = useState(null); // null | 'new' | task-object
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = useCallback((message, type='info', icon='ℹ') => {
+    const id = uid();
+    setToasts(ts => [...ts, {id, message, type, icon}]);
+    setTimeout(() => setToasts(ts => ts.filter(t=>t.id!==id)), 4000);
+  }, []);
+
+  const removeToast = id => setToasts(ts => ts.filter(t=>t.id!==id));
+
+  const handleSave = (taskData) => {
+    if (taskData.id && tasks.find(t=>t.id===taskData.id)) {
+      setTasks(ts => ts.map(t => t.id===taskData.id ? {...t,...taskData} : t));
+      addToast('Task updated.', 'success', '✓');
+    } else {
+      setTasks(ts => [taskData, ...ts]);
+      addToast('Task added!', 'success', '✓');
+    }
+    setModal(null);
+  };
+
+  const handleToggle = id => {
+    setTasks(ts => ts.map(t => {
+      if (t.id!==id) return t;
+      const done = t.status!=='completed';
+      return {...t, status: done?'completed':'pending', completed_at: done?new Date().toISOString():null};
+    }));
+    const task = tasks.find(t=>t.id===id);
+    if (task && task.status!=='completed') addToast(`"${task.title}" completed! 🎉`, 'success', '✅');
+  };
+
+  const handleDelete = id => {
+    const task = tasks.find(t=>t.id===id);
+    setTasks(ts => ts.filter(t=>t.id!==id));
+    if (task) addToast(`"${task.title}" deleted.`, 'error', '🗑');
+  };
+
+  const navItems = [
+    { id:'dashboard', icon:'⬛', label:'Dashboard', badge: tasks.filter(t=>t.status!=='completed').length },
+    { id:'analytics', icon:'📊', label:'Analytics' },
+  ];
+
+  return React.createElement('div', { className:'app' },
+    // Sidebar
+    React.createElement('div', { className:'sidebar' },
+      React.createElement('div', { className:'sidebar-logo' },
+        React.createElement('div', { className:'logo-icon' }, '✦'),
+        React.createElement('div', { className:'logo-text' }, 'TaskMind'),
+        React.createElement('div', { className:'logo-badge' }, 'AI')
+      ),
+      React.createElement('div', { className:'sidebar-nav' },
+        React.createElement('div', { className:'nav-section-label' }, 'Main'),
+        navItems.map(item =>
+          React.createElement('div', { key:item.id, className:`nav-item ${view===item.id?'active':''}`, onClick:()=>setView(item.id) },
+            React.createElement('span', { className:'nav-icon' }, item.icon),
+            item.label,
+            item.badge ? React.createElement('span', { className:'nav-badge' }, item.badge) : null
+          )
+        ),
+        React.createElement('hr', { className:'divider', style:{margin:'16px 0'} }),
+        React.createElement('div', { className:'nav-section-label' }, 'Quick Filters'),
+        [['🔥','Critical', ()=>{setView('dashboard');}],['⚠','Overdue', ()=>{setView('dashboard');}],['✅','Completed', ()=>{setView('dashboard');}]].map(([icon,label,onClick])=>
+          React.createElement('div', { key:label, className:'nav-item', onClick },
+            React.createElement('span', { className:'nav-icon' }, icon), label
+          )
+        )
+      ),
+      React.createElement('div', { className:'sidebar-footer' },
+        React.createElement('div', { className:'user-card' },
+          React.createElement('div', { className:'user-avatar' }, 'YU'),
+          React.createElement('div', null,
+            React.createElement('div', { className:'user-name' }, 'Your Account'),
+            React.createElement('div', { className:'user-role' }, 'Pro Plan')
+          ),
+          React.createElement('div', { className:'user-status' })
+        )
+      )
+    ),
+
+    // Main
+    React.createElement('div', { className:'main' },
+      React.createElement('div', { className:'topbar' },
+        React.createElement('div', null,
+          React.createElement('span', { className:'topbar-title' }, view==='dashboard'?'Dashboard':'Analytics'),
+          React.createElement('span', { className:'topbar-sub' }, view==='dashboard'?`Good ${new Date().getHours()<12?'morning':'afternoon'} — let\'s get things done.`:'Task performance & AI insights')
+        ),
+        React.createElement('div', { className:'topbar-right' },
+          React.createElement('div', { className:'view-tabs' },
+            navItems.map(item =>
+              React.createElement('div', { key:item.id, className:`view-tab ${view===item.id?'active':''}`, onClick:()=>setView(item.id) }, item.label)
+            )
+          ),
+          React.createElement('button', { className:'btn btn-primary', onClick:()=>setModal('new') }, '+ New Task')
+        )
+      ),
+      React.createElement('div', { className:'content' },
+        view==='dashboard'
+          ? React.createElement(Dashboard, { tasks, onAddTask:()=>setModal('new'), onToggle:handleToggle, onDelete:handleDelete, onEdit:t=>setModal(t), toast:addToast })
+          : React.createElement(Analytics, { tasks, toast:addToast })
+      )
+    ),
+
+    // Modal
+    modal && React.createElement(TaskModal, {
+      task: modal==='new' ? null : modal,
+      onSave: handleSave,
+      onClose: ()=>setModal(null)
+    }),
+
+    // Toasts
+    React.createElement(ToastContainer, { toasts, removeToast })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
